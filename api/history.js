@@ -1,25 +1,33 @@
-require('dotenv').config(); 
-const express = require("express");
 const admin = require("firebase-admin");
+const express = require("express");
 const cors = require("cors");
+require('dotenv').config();
 
 const app = express();
-const port = 3000;
 
 // Middleware
 app.use(cors());
 app.use(express.json());
 
-// Inisialisasi Firebase Admin SDK
-const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT;
+// Inisialisasi Firebase Admin SDK hanya jika belum ada instance
+const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT;
 
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-});
+if (!serviceAccountJson) {
+  throw new Error('FIREBASE_SERVICE_ACCOUNT_JSON belum diset di environment variable');
+}
+
+const serviceAccount = JSON.parse(serviceAccountJson);
+
+// Inisialisasi Firebase Admin SDK jika belum ada
+if (!admin.apps.length) {
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+  });
+}
 
 const db = admin.firestore();
 
-// Endpoint menerima data history dari ESP32
+// Endpoint untuk menerima data history dari ESP32
 app.post("/api/history", async (req, res) => {
   try {
     const { uid, debit, volume, waktu } = req.body;
@@ -28,11 +36,9 @@ app.post("/api/history", async (req, res) => {
       return res.status(400).json({ error: "Data tidak lengkap" });
     }
 
-    // Gunakan waktu dari ESP jika tersedia, jika tidak gunakan waktu server
     let dateObj;
     if (waktu) {
-      // Contoh waktu: "2025-06-14 23:55:02"
-      dateObj = new Date(waktu.replace(" ", "T")); // ubah ke format ISO
+      dateObj = new Date(waktu.replace(" ", "T"));
     } else {
       dateObj = new Date();
     }
@@ -55,7 +61,12 @@ app.post("/api/history", async (req, res) => {
   }
 });
 
-// Jalankan server
-app.listen(port, () => {
-  console.log(`🚀 Server berjalan di http://localhost:${port}`);
-});
+// Export sebagai handler serverless
+if (require.main === module) {
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => {
+    console.log(`Server berjalan di http://localhost:${PORT}`);
+  });
+}
+
+module.exports = app;
