@@ -1,72 +1,27 @@
-const admin = require("firebase-admin");
-const express = require("express");
-const cors = require("cors");
-require('dotenv').config();
+const { db } = require("./firebase");
 
-const app = express();
+module.exports = async (req, res) => {
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method not allowed" });
+  }
 
-// Middleware
-app.use(cors());
-app.use(express.json());
+  const { uid, debit, volume, waktu } = req.body;
 
-// Inisialisasi Firebase Admin SDK hanya jika belum ada instance
-const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT;
+  if (!uid || debit === undefined || volume === undefined || !waktu) {
+    return res.status(400).json({ error: "Field uid, debit, volume, waktu wajib diisi" });
+  }
 
-if (!serviceAccountJson) {
-  throw new Error('FIREBASE_SERVICE_ACCOUNT_JSON belum diset di environment variable');
-}
-
-const serviceAccount = JSON.parse(serviceAccountJson);
-
-// Inisialisasi Firebase Admin SDK jika belum ada
-if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
-  });
-}
-
-const db = admin.firestore();
-
-// Endpoint untuk menerima data history dari ESP32
-app.post("/api/history", async (req, res) => {
   try {
-    const { uid, debit, volume, waktu } = req.body;
-
-    if (!uid || debit == null || volume == null) {
-      return res.status(400).json({ error: "Data tidak lengkap" });
-    }
-
-    let dateObj;
-    if (waktu) {
-      dateObj = new Date(waktu.replace(" ", "T"));
-    } else {
-      dateObj = new Date();
-    }
-
-    const timestamp = admin.firestore.Timestamp.fromDate(dateObj);
-
-    const historyRef = db.collection("history").doc(uid).collection("data");
-
-    await historyRef.add({
+    await db.collection("history").add({
+      uid,
       debit,
       volume,
-      timestamp,
+      waktu,
+      timestamp: admin.firestore.FieldValue.serverTimestamp()
     });
 
-    console.log(`✓ History disimpan untuk UID: ${uid}, Waktu: ${dateObj.toISOString()}`);
-    res.status(200).json({ message: "Data history berhasil disimpan" });
-  } catch (error) {
-    console.error("✗ Gagal simpan history:", error);
-    res.status(500).json({ error: "Gagal menyimpan data history" });
+    res.status(200).json({ success: true, message: "History berhasil disimpan" });
+  } catch (err) {
+    res.status(500).json({ error: "Gagal menyimpan history", detail: err.message });
   }
-});
-
-// Export sebagai handler serverless
-if (require.main === module) {
-  const PORT = process.env.PORT || 3000;
-  app.listen(PORT, () => {
-    console.log(`Server berjalan di http://localhost:${PORT}`);
-  });
-}
-
-module.exports = app;
+};
