@@ -1,4 +1,4 @@
-const { db } = require("./firebase");
+const { db, admin } = require("../firebase");
 
 module.exports = async (req, res) => {
   if (req.method !== "POST") {
@@ -17,11 +17,11 @@ module.exports = async (req, res) => {
       debit,
       volume,
       waktu,
-      timestamp: admin.firestore.FieldValue.serverTimestamp()
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
     });
 
-    res.status(200).json({ success: true, message: "History berhasil disimpan" });
+    return res.status(200).json({ success: true, message: "History berhasil disimpan" });
   } catch (err) {
-    res.status(500).json({ error: "Gagal menyimpan history", detail: err.message });
+    return res.status(500).json({ error: "Gagal menyimpan history", detail: err.message });
   }
 };

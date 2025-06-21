@@ -1,6 +1,10 @@
 const admin = require("firebase-admin");
 
 if (!admin.apps.length) {
+  if (!process.env.FIREBASE_SERVICE_ACCOUNT) {
+    throw new Error("FIREBASE_SERVICE_ACCOUNT tidak ditemukan.");
+  }
+
   const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
 
   admin.initializeApp({
@@ -9,4 +13,4 @@ if (!admin.apps.length) {
 }
 
 const db = admin.firestore();
-module.exports = { db };
+module.exports = { admin, db };

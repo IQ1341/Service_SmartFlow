@@ -1,4 +1,4 @@
-const { db } = require("./firebase");
+const { db, admin } = require("../firebase");
 
 module.exports = async (req, res) => {
   if (req.method !== "POST") {
@@ -8,7 +8,7 @@ module.exports = async (req, res) => {
   const { uid, pesan, level, waktu } = req.body;
 
   if (!uid || !pesan || !level || !waktu) {
-    return res.status(400).json({ error: "Semua field wajib diisi" });
+    return res.status(400).json({ error: "Field uid, pesan, level, waktu wajib diisi" });
   }
 
   try {
@@ -17,11 +17,11 @@ module.exports = async (req, res) => {
       pesan,
       level,
       waktu,
-      timestamp: admin.firestore.FieldValue.serverTimestamp()
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
     });
 
-    res.status(200).json({ success: true, message: "Notifikasi disimpan" });
+    return res.status(200).json({ success: true, message: "Notifikasi berhasil disimpan" });
   } catch (err) {
-    res.status(500).json({ error: "Gagal menyimpan notifikasi", detail: err.message });
+    return res.status(500).json({ error: "Gagal menyimpan notifikasi", detail: err.message });
   }
 };
