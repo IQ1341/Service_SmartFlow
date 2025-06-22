@@ -1,11 +1,14 @@
 const admin = require("firebase-admin");
 
 if (!admin.apps.length) {
-  if (!process.env.FIREBASE_SERVICE_ACCOUNT) {
-    throw new Error("FIREBASE_SERVICE_ACCOUNT tidak ditemukan.");
+  const base64 = process.env.FIREBASE_SERVICE_ACCOUNT;
+
+  if (!base64) {
+    throw new Error("FIREBASE_SERVICE_ACCOUNT_BASE64 tidak ditemukan.");
   }
 
-  const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+  const decoded = Buffer.from(base64, "base64").toString("utf-8");
+  const serviceAccount = JSON.parse(decoded);
 
   admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
